@@ -16,7 +16,20 @@ function projected_coordinate(x::AbstractVector{Float64}, y::AbstractVector{Floa
     return r, z
 end
 
-mutable struct Pellet{A,T,N,S,B,X}
+"""
+Preallocated buffer pool to reduce allocations
+"""
+mutable struct AllocationPool{T<:Real}
+    nsource_buffer::Vector{T}
+    nsource_max_len::Int
+end
+
+function AllocationPool(::Type{T}, surfaces::Vector{IMAS.FluxSurface}) where {T<:Real}
+    max_len = maximum(length(surf.r) for surf in surfaces)
+    return AllocationPool{T}(Vector{T}(undef, max_len), max_len)
+end
+
+mutable struct Pellet{A,T,N,S,B,X,P}
     properties::IMAS.pellets__time_slice___pellet
     Btdep::B
     update_plasma::B
@@ -37,6 +50,7 @@ mutable struct Pellet{A,T,N,S,B,X}
     ablation_rate::A
     density_source::N
     temp_drop::A
+    pool::P
 end
 
 function Pellet(
@@ -99,6 +113,10 @@ function Pellet(
     temp_drop = fill(0.0, size(time))
     R_drift = fill(0.0, size(time))
     density_source = fill(0.0, (length(time), length(surfaces)))
+
+    # Initialize allocation pool
+    pool = AllocationPool(Float64, surfaces)
+
     return Pellet(
         pelt,
         Bt_dependance,
@@ -119,7 +137,8 @@ function Pellet(
         radius,
         ablation_rate,
         density_source,
-        temp_drop
+        temp_drop,
+        pool
     )
 end
 
@@ -536,7 +555,11 @@ function dr_dt!(pelt::Pellet, k::Int)
 end
 
 function pellet_density(pelt::Pellet, surface::IMAS.FluxSurface, k::Int)
-    # calculations of the pellet cloud size
+    # Get buffer view from pool
+    len = length(surface.r)
+    nsource = @view pelt.pool.nsource_buffer[1:len]
+
+    # Cloud size calculations
     cloudFactor = 5
 
     cloudFactorR = cloudFactor
@@ -545,11 +568,14 @@ function pellet_density(pelt::Pellet, surface::IMAS.FluxSurface, k::Int)
     rcloudR = pelt.radius[k] * cloudFactorR
     rcloudZ = pelt.radius[k] * cloudFactorZ
 
-    # Assume density source as a 2D Gaussian function
-    nsource = exp.(-0.5 .* ((pelt.r[k] .- surface.r .+ 0.5 .* pelt.R_drift[k]) .^ 2 ./ (rcloudR .+ 0.25 .* pelt.R_drift[k]) .^ 2 .+ (pelt.z[k] .- surface.z) .^ 2 ./ rcloudZ .^ 2))
+    # # Compute 2D Gaussian density source (in-place)
+    @. nsource = exp(-0.5 * (
+        (pelt.r[k] - surface.r + 0.5 * pelt.R_drift[k])^2 / (rcloudR + 0.25 * pelt.R_drift[k])^2 +
+        (pelt.z[k] - surface.z)^2 / rcloudZ^2
+    ))
 
     # need to normilize on the surface area under the gaussian shape
-    nsource ./= (2 * π)^2 * (rcloudR + 0.25 * pelt.R_drift[k]) * (pelt.r[k] + 0.5 * pelt.R_drift[k]) * rcloudZ
+    nsource ./= (2π)^2 * (rcloudR + 0.25 * pelt.R_drift[k]) * (pelt.r[k] + 0.5 * pelt.R_drift[k]) * rcloudZ
 
     nsource .*= pelt.ablation_rate[k]
 
