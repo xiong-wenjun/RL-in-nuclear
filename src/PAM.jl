@@ -108,7 +108,8 @@ function Pellet(
 
     radii = cumsum([layer.thickness for layer in pelt.layer])
     @assert pelt.shape.size[1] == radii[end] "The layer's thickness don't add up to the total radius"
-    radius = fill(radii[end], size(time))
+    radius = fill(0.0, size(time))
+    radius[1] = radii[end] # Set initial radius at t=0
     ablation_rate = fill(0.0, size(time))
     temp_drop = fill(0.0, size(time))
     R_drift = fill(0.0, size(time))
@@ -590,23 +591,21 @@ function ablate!(eqt::IMAS.equilibrium__time_slice, cp1d::IMAS.core_profiles__pr
 
         if pelt.ρ[k] > 1.0 && pelt.radius[k-1] > 0
             pelt.radius[k] = pelt.radius[k-1]
-
         else
             dr_dt!(pelt, k)
             if isnan(pelt.ablation_rate[k])
-
                 pelt.ablation_rate[k] = 0.0
+            end
+
+            if pelt.radius[k] <= 0.0
+                @info "Pellet fully ablated at t = $(pelt.time[k]) s"
+                return 
             end
 
             drift!(Val(pelt.drift_model), pelt, eqt, cp1d, k)
 
             for (ks, surface) in enumerate(surfaces)
-                tmp = pellet_density(pelt, surface, k)
-                if isnan(tmp)
-                    pellet_source[k, ks] += 0.0
-                else
-                    pellet_source[k, ks] += tmp * dt
-                end
+                pellet_source[k, ks] += pellet_density(pelt, surface, k) * dt
             end
 
             #------calculate energy sink and update plasma -----------
