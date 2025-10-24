@@ -47,10 +47,9 @@ println("✅ 模拟完成！")
 
 # ========== 绘图 ==========
 # 1. 轨迹图 (r-z)
-plot(pellet.r, pellet.z,
-    xlabel="r (m)", ylabel="z (m)",
-    title="Pellet Trajectory", legend=false)
-savefig("pellet_trajectory.png")
+plot(pellet.r .+ pellet.R_drift, pellet.z,
+     xlabel="r (m)", ylabel="z (m)", title="Pellet Trajectory (with drift)", legend=false)
+savefig("pellet_trajectory_drift.png")
 println("📈 Saved: pellet_trajectory.png")
 
 # 2. 半径随时间变化
