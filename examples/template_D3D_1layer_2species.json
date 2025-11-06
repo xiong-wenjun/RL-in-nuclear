@@ -97457,7 +97457,7 @@
 "thickness": 0.001
 }
 ],
-"velocity_initial": 120.0,
+"velocity_initial": 150.0,
 "path_profiles": {
 "position": {
 "phi": [

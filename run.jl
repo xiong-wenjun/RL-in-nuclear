@@ -5,7 +5,7 @@ using PAM   # 确保已经在 LOAD_PATH 或 dev 安装好 PAM 模块
 
 # 1️⃣ 读取 IMAS 数据（包含 equilibrium, core_profiles, pellets）
 dd = IMAS.hdf2imas("examples/template_D3D_1layer_2species.h5")
-
+##dd.pellets.time_slice[].pellet[1].velocity_initial = 200.0 
 # 2️⃣ 设置模拟参数
 params = (
     t_start = 0.0,
@@ -23,7 +23,7 @@ pellet = PAM.run_PAM(dd; params...)
 eq = dd.equilibrium.time_slice[1]
 r_bnd = eq.boundary.outline.r
 z_bnd = eq.boundary.outline.z
-pam.run(ablation_model='Parks2022', deposition_model='Gaussian2D')
+pam.run(ablation_model='PAM', deposition_model='Gaussian2D')
 pam.plot_profiles(compare='HPI2')
 # 5️⃣ 绘制轨迹
 plot(r_bnd, z_bnd,

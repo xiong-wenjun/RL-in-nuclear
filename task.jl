@@ -10,7 +10,6 @@ Description:
       - ablation_rate.png
 """
 
-
 import PAM
 import IMAS
 using Plots
@@ -20,7 +19,7 @@ ENV["GKSwstype"] = "100"  # 禁止 GUI 弹窗 (headless 环境)
 
 # ========== 加载输入数据 ==========
 example_dir = joinpath(@__DIR__, "examples")
-json_file = joinpath(example_dir, "template_D3D_1layer_2species.json")
+json_file = joinpath(example_dir, "/gemini/code/PAM.jl/examples/template_D3D_1layer_2species.json")
 
 if !isfile(json_file)
     error("❌ 示例文件未找到: $json_file")
@@ -28,13 +27,24 @@ end
 
 println("🔹 Loading IMAS data from JSON...")
 dd = IMAS.json2imas(json_file)
-dd.pellets.time_slice[].pellet[1].velocity_initial = 200.0
-
+###通过RL训练的时候引入agent控制这几个参数, 接口到时候可以直接通过接口改动速度
+dd.pellets.time_slice[].pellet[1].velocity_initial = 300.0
+dd.pellets.time_slice[].pellet[1].layer[1].thickness = 0.5
+dd.pellets.time_slice[].pellet[1].shape.size[1] = 0.5
+dd.pellets.time_slice[].pellet[1].path_geometry.second_point.phi =0.0
+dd.pellets.time_slice[].pellet[1].path_geometry.first_point.phi = 0.0
+dd.pellets.time_slice[].pellet[1].path_geometry.first_point.z = 1.0
+"""
+表示为从装置中心向外的距离为r
+dd.pellets.time_slice[].pellet[1].path_geometry.first_point.r = 45.0"
+表示为从装置中心的垂直距离为多少
+dd.pellets.time_slice[].pellet[1].path_geometry.first_point.z = 45.0"
+"""
 # ========== 模型参数 ==========
 params = (
     t_start = 0.0,
-    t_finish = 0.0045,
-    time_step = 0.0001,
+    t_finish = 0.45,
+    time_step = 0.001,
     drift_model = :HPI2,        # 可选 :Parks / :none
     Bt_dependance = true,
     update_plasma = false,
