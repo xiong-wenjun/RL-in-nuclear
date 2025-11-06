@@ -1,0 +1,5 @@
+# configs/env_background.yaml
+Z: 0.4
+plasma_Te: 1000  # eV
+plasma_ne: 1.0e19
+mag_field: 5.0   # Tesla
