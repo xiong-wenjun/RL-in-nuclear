@@ -2,11 +2,30 @@ import PAM
 import IMAS
 using Test
 
+function deep_isapprox(a, b; rtol=1e-8, atol=1e-12)
+    if a === b
+        return true
+    elseif a isa Number && b isa Number
+        return isapprox(a, b; rtol=rtol, atol=atol)
+    elseif typeof(a) != typeof(b)
+        return false
+    elseif isstruct(a)
+        return all(deep_isapprox(getfield(a,f), getfield(b,f); rtol=rtol, atol=atol)
+                   for f in fieldnames(typeof(a)))
+    elseif a isa AbstractArray
+        return length(a) == length(b) &&
+            all(deep_isapprox(a[i], b[i]; rtol=rtol, atol=atol)
+                for i in eachindex(a))
+    else
+        return a == b
+    end
+end
+
 @testset "PAM" begin
     dd_D3D_json = IMAS.json2imas(joinpath(@__DIR__, "..", "examples", "template_D3D_1layer_2species.json"))
     dd_D3D = IMAS.hdf2imas(joinpath(@__DIR__, "..", "examples", "template_D3D_1layer_2species.h5"))
 
-    @test dd_D3D_json == dd_D3D
+    @test deep_isapprox(dd_D3D_json, dd_D3D)
 
     dd_D3D.pellets.time_slice[].pellet[1].velocity_initial = 200.0
 
