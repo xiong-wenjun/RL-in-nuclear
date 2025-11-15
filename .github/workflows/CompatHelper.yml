@@ -1,12 +1,24 @@
 name: CompatHelper
-env:
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 on:
   schedule:
-    - cron: 0 0 * * *
+    - cron: "0 0 * * *"
   workflow_dispatch:
 
 jobs:
-  CompatHelper:
-    uses: xiong-wenjun/RL-in-nuclear/.github/workflows/CompatHelper.yml@main
+  compathelper:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Julia
+        uses: julia-actions/setup-julia@v1
+        with:
+          version: '1'
+
+      - name: Install CompatHelper
+        run: julia -e 'using Pkg; Pkg.add("CompatHelper")'
+
+      - name: Run CompatHelper
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: julia -e 'using CompatHelper; CompatHelper.main()'
