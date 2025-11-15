@@ -9,4 +9,4 @@ on:
 
 jobs:
   CompatHelper:
-    uses: xiong-wenjun/RL-in-nuclear/.github/workflows/compat_helper.yml@main
+    uses: xiong-wenjun/RL-in-nuclear/.github/workflows/compatHelper.yml@main
